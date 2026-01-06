@@ -1,0 +1,46 @@
+# Face Detection System Configuration
+# This file contains model and system parameters only
+# User data is managed via command-line arguments in faceRegistration.py
+
+# File paths
+paths:
+  embeddings: "embeddings"
+  models: "models"
+
+# Camera settings
+camera:
+  index: 0  # Camera device index (0 for default, 1+ for additional cameras)
+  width: 1280
+  height: 720
+  fps: 30
+
+# YuNet Face Detection Model
+yunet:
+  model_name: "face_detection_yunet_2023mar.onnx"
+  score_threshold: 0.9  # Confidence threshold for face detection (0.0-1.0)
+  nms_threshold: 0.3    # Non-maximum suppression threshold
+  top_k: 5000           # Maximum number of faces to detect
+  input_size: [320, 320]  # Model input size [width, height]
+
+# SFace Recognition Model
+recognition:
+  model_name: "face_recognition_sface_2021dec.onnx"
+  enabled: true  # Enable/disable face recognition
+
+# Detection parameters
+detection:
+  similarity_threshold: 0.5  # Cosine similarity threshold for face matching (0.0-1.0)
+                             # Higher = stricter matching, Lower = more lenient
+                             # Typical range: 0.3-0.6
+  threshold_adjustment_step: 0.05  # Step size for +/- threshold adjustment
+  face_alignment_size: [112, 112]  # Size for face alignment before embedding extraction
+
+
+
+# MQTT Configuration
+mqtt:
+  enabled: true  # Enable/disable MQTT publishing
+  broker: "10.171.181.60" # MQTT broker address (e.g., "192.168.1.100" or "broker.hivemq.com")
+  port: 8883  # MQTT broker port
+  topic: "access_control/decision"  # Topic to publish decisions
+  client_id: "face_detection_system"  # Unique client identifier

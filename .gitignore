@@ -1,0 +1,22 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtual environment
+venv/
+
+
+# Models
+models/
+
+# Embeddings
+embeddings/
+
+# Registered face images
+registered_faces/
+
+# OS files
+.DS_Store
+Thumbs.db
+
