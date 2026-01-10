@@ -1,316 +1,173 @@
-# 🔐 Face Recognition Access Control System
+# 🔐 Access-Control-System — Face Recognition Door Access
 
-A real-time face recognition access control system using **YuNet** face detection and **SFace** face recognition with OpenCV. The system detects the closest face to the camera, extracts face embeddings (tensor representations), and compares them with registered faces to grant or deny access.
+A lightweight, real-time face recognition access control system using OpenCV with YuNet for face detection and SFace for face embeddings.
 
-![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)
-![OpenCV](https://img.shields.io/badge/OpenCV-4.8+-green.svg)
-![License](https://img.shields.io/badge/License-MIT-yellow.svg)
+This repository provides scripts to register users (capture faces + compute embeddings) and to run a live access control demo that recognizes the closest face to the camera and simulates door opening/closing.
 
-## 📋 Table of Contents
+Badges: Python 3.8+ · OpenCV 4.8+ · MIT License
 
-- [Features](#-features)
-- [System Architecture](#-system-architecture)
-- [Installation](#-installation)
-- [Project Structure](#-project-structure)
-- [Usage](#-usage)
-- [How It Works](#-how-it-works)
-- [Configuration](#-configuration)
-- [Troubleshooting](#-troubleshooting)
-- [Advanced Features](#-advanced-features)
-- [Contributing](#-contributing)
-- [License](#-license)
+## Table of contents
 
-## ✨ Features
+- About
+- Features
+- Quick start
+- Usage
+  - Register a user
+  - Run access control (detection)
+- Configuration
+- Project structure
+- How it works (brief)
+- Troubleshooting & tips
+- Contributing
+- License
 
-- ✅ **State-of-the-art Face Detection**: YuNet detector with facial landmarks
-- ✅ **Accurate Face Recognition**: SFace model with 128-D embeddings
-- ✅ **Closest Face Priority**: Always processes the face nearest to camera
-- ✅ **Real-time Processing**: Fast detection and recognition
-- ✅ **Multi-user Support**: Register and recognize multiple users
-- ✅ **Access Control Simulation**: Door open/close based on recognition
-- ✅ **Confidence Scoring**: Shows detection and recognition confidence
-- ✅ **Visual Feedback**: Color-coded bounding boxes and facial landmarks
-- ✅ **Access Logging**: Timestamp-based access attempt logging
-- ✅ **Adjustable Threshold**: Runtime threshold adjustment
-- ✅ **Auto Model Download**: Automatically downloads required models
+## About
 
-## 🏗️ System Architecture
+This project demonstrates a complete pipeline for camera-based face access control:
+- Detect faces using YuNet (with landmarks and confidence)
+- Extract 128-D embeddings with SFace
+- Select the closest face (largest bounding box) for recognition
+- Compare embeddings with a simple cosine similarity threshold to grant or deny access
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    CAMERA INPUT                              │
-└───────────────────────┬─────────────────────────────────────┘
-                        │
-                        ▼
-┌─────────────────────────────────────────────────────────────┐
-│              YUNET FACE DETECTION                            │
-│   • Detects all faces in frame                              │
-│   • Extracts facial landmarks (5 points)                    │
-│   • Returns confidence scores                               │
-└───────────────────────┬─────────────────────────────────────┘
-                        │
-                        ▼
-┌─────────────────────────────────────────────────────────────┐
-│           SELECT CLOSEST FACE                                │
-│   • Based on bounding box area (largest = closest)          │
-└───────────────────────┬─────────────────────────────────────┘
-                        │
-        ┌───────────────┴────────────────┐
-        │                                │
-        ▼                                ▼
-┌──────────────────┐          ┌──────────────────────┐
-│  REGISTRATION    │          │   DETECTION          │
-│  • Save images   │          │   • Extract ROI      │
-│  • Extract       │          │   • Extract          │
-│    embeddings    │          │     embedding        │
-│  • Store in DB   │          │   • Compare with DB  │
-└──────────────────┘          └──────────┬───────────┘
-                                         │
-                                         ▼
-                        ┌────────────────────────────┐
-                        │  COSINE SIMILARITY         │
-                        │  • Compare embeddings      │
-                        │  • Calculate scores        │
-                        └────────────┬───────────────┘
-                                     │
-                                     ▼
-                        ┌────────────────────────────┐
-                        │  ACCESS DECISION           │
-                        │  POSITIVE: Match found     │
-                        │  NEGATIVE: No match        │
-                        └────────────────────────────┘
-```
+It’s designed to be simple to run on CPU and easy to extend for integration with real hardware (e.g., smart lock firmware in `smart_lock_firmware/`).
 
-## 🚀 Installation
+## Features
 
-### Prerequisites
+- Real-time face detection with landmark visualization (YuNet)
+- Robust face embeddings via SFace (128-D)
+- Closest-face prioritization (largest bounding box)
+- Multi-user registration and per-user averaged embeddings
+- Adjustable similarity threshold at runtime
+- Auto-download of required models if missing
+- Simple serialized embeddings database (`embeddings/face_database.pkl`)
 
-- Python 3.8 or higher
-- Webcam/Camera
-- Internet connection (for first-time model download)
+## Quick start
 
-### Step 1: Clone or Download
-
-```bash
-# If using git
-git clone <repository-url>
-cd face-recognition-access-control
-
-# Or download and extract the ZIP file
-```
-
-### Step 2: Install Dependencies
+1. Install dependencies:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-**Required packages:**
-- `opencv-contrib-python>=4.8.0` - Computer vision library with extra modules
-- `numpy>=1.24.0` - Numerical computing
-- `Pillow>=10.0.0` - Image processing
-- `PyYAML>=6.0` - YAML configuration file parsing
-
-**Note:** Make sure to install `opencv-contrib-python` (not just `opencv-python`) to get the face recognition modules.
-
-### Step 3: Verify Installation
+2. Verify OpenCV:
 
 ```bash
-python -c "import cv2; print('OpenCV version:', cv2.__version__)"
+python -c "import cv2; print('OpenCV:', cv2.__version__)"
 ```
 
-Expected output: `OpenCV version: 4.8.x` or higher
+3. Register at least one user (see next section) then run the detector:
 
-## 📁 Project Structure
+```bash
+# register a user
+python faceRegistration.py
 
-```
-face-recognition-access-control/
-│
-├── faceRegistration.py          # Register new users
-├── faceDetection.py             # Run access control system
-├── utils.py                     # Helper functions
-├── config.yml                   # Configuration file ⭐ NEW
-├── requirements.txt             # Python dependencies
-├── README.md                    # This file
-│
-├── models/                      # AI models (auto-downloaded)
-│   ├── face_detection_yunet_2023mar.onnx
-│   └── face_recognizer_sface_2021dec.onnx
-│
-├── registered_faces/            # Face images (auto-created)
-│   ├── ahmed/
-│   │   ├── face_0_*.jpg
-│   │   ├── face_1_*.jpg
-│   │   └── ...
-│   ├── john/
-│   └── ...
-│
-└── embeddings/                  # Face database (auto-created)
-    └── face_database.pkl        # Serialized embeddings
+# run access control
+python faceDetection.py
 ```
 
-## 🎯 Usage
+## Usage
 
-### 1. Register a New User
+### Register a user
 
-Edit `config.yml` and change the user name:
+1. Open `config.yml` and set the user name and target images, e.g.:
 
 ```yaml
 user:
-  name: "ahmed"  # Change to the person's name
+  name: "alice"
   target_images: 20
 ```
 
-Run the registration script:
+2. Run registration:
 
 ```bash
 python faceRegistration.py
 ```
 
-**Instructions:**
-1. Position your face in front of the camera
-2. Wait for face detection (green bounding box with landmarks)
-3. Press **'s'** to start capturing 20 images
-4. The system will automatically extract embeddings
-5. Press **'q'** to quit anytime
+Controls and notes:
+- Position the person in front of the camera.
+- Press `s` to start capture (the script will save several face crops and compute embeddings).
+- Press `q` to quit at any time.
+- The script computes per-capture embeddings and stores an average embedding in `embeddings/`.
 
-**What happens:**
-- Detects the **closest face** (largest bounding box)
-- Captures 20 diverse images (with frame skipping)
-- Extracts 128-D embedding for each image
-- Computes average embedding for robust matching
-- Saves images and embeddings to database
-
-### 2. Run Face Detection
+### Run access control (real-time detection)
 
 ```bash
 python faceDetection.py
 ```
 
-**Instructions:**
-- System starts automatically detecting faces
-- Green box + "ACCESS GRANTED" = Recognized user
-- Red box + "ACCESS DENIED" = Unknown person
-- Press **'+'** or **'-'** to adjust similarity threshold
-- Press **'q'** to quit
+While running:
+- The system shows bounding boxes, landmarks and similarity scores.
+- The closest face (largest BB) is used for recognition.
+- Use `+` / `-` keys to raise/lower the similarity threshold.
+- `ACCESS GRANTED` (green) appears when similarity >= threshold.
 
-**Real-time Display:**
-- Door status (OPEN/CLOSED)
-- Face detection count
-- Similarity scores for all registered users
-- Facial landmarks
-- Confidence levels
+## Configuration
 
-### 3. Register Multiple Users
+- `config.yml` controls user name, number of frames captured for registration, model paths, and threshold settings. Edit it before running registration or detection if you need custom behavior.
+- Models are stored under `models/` and will be downloaded automatically if missing.
 
-Repeat step 1 for each person by updating `config.yml`:
+## Project structure
 
-```yaml
-# First user
-user:
-  name: "ahmed"
-
-# Run: python faceRegistration.py
-
-# Then change to next user
-user:
-  name: "john"
-
-# Run: python faceRegistration.py again
-```
-
-The database automatically handles multiple users.
-
-## 🔬 How It Works
-
-### Face Detection (YuNet)
-
-**YuNet** is a lightweight, high-accuracy face detector that:
-- Detects faces at various scales and angles
-- Extracts 5 facial landmarks: eyes, nose, mouth corners
-- Provides confidence scores for each detection
-- Runs in real-time on CPU
-
-**Detection Process:**
-```
-Frame → YuNet → Faces + Landmarks + Confidence
-```
-
-### Face Recognition (SFace)
-
-**SFace** extracts 128-dimensional feature vectors (embeddings) that represent faces:
-- Trained on millions of faces
-- Robust to lighting, pose, expression variations
-- Maps similar faces to nearby points in 128-D space
-- Enables fast comparison via vector math
-
-**Recognition Process:**
-```
-Face Image → SFace → 128-D Embedding → Normalization → Unit Vector
-```
-
-### Closest Face Selection
-
-The system prioritizes the face with the **largest bounding box area**:
-
-```python
-area = width × height
-closest_face = face_with_max_area
-```
-
-**Why area?** Larger bounding box typically means the face is closer to the camera.
-
-### Face Comparison
-
-**Cosine Similarity** measures the angle between two embedding vectors:
+Top-level layout (key files):
 
 ```
-similarity = (A · B) / (||A|| × ||B||)
-
-where:
-  A = query embedding
-  B = registered embedding
-  · = dot product
-  ||·|| = L2 norm (vector length)
+Access-Control-System/
+├─ faceRegistration.py      # Capture faces and register a user
+├─ faceDetection.py         # Run live detection + recognition
+├─ utils.py                 # Helper functions (I/O, drawing, embeddings)
+├─ config.yml               # Runtime config (user name, thresholds)
+├─ requirements.txt         # Python dependencies
+├─ models/                  # ONNX models (YuNet, SFace)
+├─ registered_faces/        # Saved face crops per user
+├─ embeddings/              # face_database.pkl (serialized embeddings)
+└─ smart_lock_firmware/     # Example Arduino/firmware files
 ```
 
-**Interpretation:**
-- `1.0` = Identical faces (0° angle)
-- `0.0` = Completely different (90° angle)
-- `-1.0` = Opposite (180° angle)
+## How it works (brief)
 
-**Decision Logic:**
-```python
-if similarity >= threshold:  # Default: 0.4
-    return "POSITIVE - ACCESS GRANTED"
-else:
-    return "NEGATIVE - ACCESS DENIED"
+1. YuNet detects faces and 5-point landmarks in each frame.
+2. The face with the largest bounding box (closest) is selected.
+3. The face crop is fed to SFace to produce a 128-D embedding.
+4. Cosine similarity compares the query embedding to stored per-user embeddings.
+5. If similarity >= configurable threshold, access is granted.
+
+Cosine similarity:
+
+\\[ similarity = (A · B) / (||A|| ||B||) \\\]
+
+Higher similarity indicates more likely same person. Default threshold is conservative but can be tuned.
+
+## Troubleshooting & tips
+
+- If no faces are detected: check camera access and lighting. Try increasing camera exposure or move closer.
+- If recognition is inconsistent: capture more diverse images during registration (angles, lighting, expressions).
+- Ensure `opencv-contrib-python` is installed (required for some face modules):
+
+```bash
+pip install opencv-contrib-python
 ```
 
-### Database Structure
+- If models fail to download automatically, manually place the required ONNX files into `models/`:
+  - `face_detection_yunet_2023mar.onnx`
+  - `face_recognition_sface_2021dec.onnx`
 
-Face embeddings are stored in a pickle file:
+## Contributing
 
-```python
-face_database = {
-    'ahmed': {
-        'embedding': np.array([...]),          # Average 128-D vector
-        'embeddings_list': [array1, array2, ...],  # All 20 embeddings
-        'num_samples': 20,
-        'timestamp': '2024-12-06T14:30:25',
-        'method': 'YuNet + SFace'
-    },
-    'john': {
-        ...
-    }
-}
-```
+Contributions welcome. Suggested improvements:
 
-## 🎓 Learn More
+- Add a small web UI for remote monitoring
+- Add encrypted on-disk storage for embeddings
+- Integrate with a physical relay to trigger a real lock
 
-- [OpenCV Documentation](https://docs.opencv.org/)
-- [YuNet Paper](https://github.com/ShiqiYu/libfacedetection)
-- [Face Recognition Theory](https://www.pyimagesearch.com/2018/09/24/opencv-face-recognition/)
-- [Cosine Similarity Explained](https://en.wikipedia.org/wiki/Cosine_similarity)
+Please open issues or pull requests with clear descriptions and tests where possible.
+
+## License
+
+MIT — see `LICENSE` (add one if not present).
 
 ---
+
+If you'd like, I can also:
+- add a short quickstart script or helper (Makefile) to simplify running the steps,
+- or generate a minimal `LICENSE` file and small example showing how the embeddings are stored.
+
