@@ -105,8 +105,8 @@ class FaceDetectionSystem:
                 port=mqtt_config['port'],
                 topic=mqtt_config['topic'],
                 client_id=mqtt_config['client_id'],
-                username="espuser",          # your Mosquitto user
-                password="esppass",
+                username="enter your username",          # your Mosquitto user
+                password="enter your password",          # your Mosquitto password
                 cafile=cafile_path
             )
             if not self.mqtt_publisher.connect():
